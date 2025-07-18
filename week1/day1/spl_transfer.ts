@@ -14,7 +14,7 @@ const connection = new Connection("https://api.devnet.solana.com", commitment);
 const mint = new PublicKey("F5jQH6a8W5j6VVDDF8pQUGe3kFJaEo8xciZGbuk2j7H5");
 
 // Recipient address
-const to = new PublicKey("2QkJLTKTtYFHS6xir1TEXLSdajM7r1Djf96JogKnRGSR");
+const to = new PublicKey("Coop1aAuEqbN3Pm9TzohXvS3kM4zpp3pJZ9D4M2uWXH2");
 
 (async () => {
     try {
@@ -25,7 +25,7 @@ const to = new PublicKey("2QkJLTKTtYFHS6xir1TEXLSdajM7r1Djf96JogKnRGSR");
         const ataTo = await getOrCreateAssociatedTokenAccount(connection, keypair, mint, to);
 
         // Transfer the new token to the "toTokenAccount" we just created
-        const transfer_tx = await transfer(connection, keypair, ataFrom.address, ataTo.address, keypair.publicKey, 1_000_000n);
+        const transfer_tx = await transfer(connection, keypair, ataFrom.address, ataTo.address, keypair.publicKey, 1_690_000n);
 
         console.log("Tx ID: ", transfer_tx);
     } catch(e) {

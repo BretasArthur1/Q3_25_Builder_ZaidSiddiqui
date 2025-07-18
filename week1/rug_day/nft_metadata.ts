@@ -1,6 +1,6 @@
 import wallet from "../day1/Turbin3-wallet.json"
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults"
-import { createGenericFile, createSignerFromKeypair, signerIdentity } from "@metaplex-foundation/umi"
+import { createGenericFile, createGenericFileFromJson, createSignerFromKeypair, signerIdentity } from "@metaplex-foundation/umi"
 import { irysUploader } from "@metaplex-foundation/umi-uploader-irys"
 
 // Create a devnet connection
@@ -32,11 +32,13 @@ umi.use(signerIdentity(signer));
                         type: "image/png",
                         uri: image
                     },
-                ]
+                ],
+                category: "image"
             },
             creators: []
         };
-        const myUri = await umi.uploader.uploadJson([metadata])
+
+        const myUri = await umi.uploader.uploadJson(metadata)
         console.log("Your metadata URI: ", myUri);
     }
     catch(error) {

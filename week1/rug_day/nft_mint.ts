@@ -16,11 +16,11 @@ umi.use(mplTokenMetadata())
 const mint = generateSigner(umi);
 
 (async () => {
-    let tx = await createNft(umi, {
+    let tx = createNft(umi, {
         mint,
         name: "Jeff Rug",
         symbol: "JEFF",
-        uri: "https://devnet.irys.xyz/EqbXA9gRLndcDEJjHBsog49Z1B9WRzNTBx7FugmWTeRS",
+        uri: "https://gateway.irys.xyz/CBK5W4GDsRvQzjfDC2aFZvU3aQojLApd3HFUjv4Xhrbp",
         sellerFeeBasisPoints: percentAmount(5),
     });
     let result = await tx.sendAndConfirm(umi);
