@@ -39,9 +39,9 @@ Welcome to my proof of work repository for the **Turbin3 Builders Cohort**. This
 
 | Day | Project              | Description                                         |
 |-----|----------------------|-----------------------------------------------------|
-| 1   | [`FitStake`](./FitStake/docs/) | Feedback on capstone project                    |
-| 2   | [`Dice Game`](./dice-game/)    | Instruction introspection for transaction verification |
-| 3   | [`Dao`](./dao/)               | DAO implementation with quadratic voting         |
+| 1   | [`fitstake`](./FitStake/docs/) | Feedback on capstone project                    |
+| 2   | [`dice-game`](./dice-game/)    | Instruction introspection for transaction verification |
+| 3   | [`dao`](./dao/)               | DAO implementation with quadratic voting         |
 
 
 ---
