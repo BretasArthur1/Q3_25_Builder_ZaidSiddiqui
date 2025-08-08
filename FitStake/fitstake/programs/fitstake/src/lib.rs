@@ -8,6 +8,7 @@ mod state;
 mod instructions;
 
 use instructions::*;
+use state::*;
 
 #[program]
 pub mod fitstake {
@@ -15,5 +16,10 @@ pub mod fitstake {
 
     pub fn init_user(ctx: Context<InitUser>, first_name: String, last_name: String, wallet: Pubkey, date_of_birth: i64) -> Result<()> {
         ctx.accounts.init_user(first_name, last_name, wallet, date_of_birth, &ctx.bumps)
+    }
+
+    pub fn init_goal(ctx: Context<InitGoal>, seed: u64, stake_amount: u64, deadline: i64, status: Status, charity: Pubkey, details: String) -> Result<()> {
+        ctx.accounts.init_goal(seed, stake_amount, deadline, status, charity, details, &ctx.bumps)?;
+        ctx.accounts.deposit_stake()
     }
 }

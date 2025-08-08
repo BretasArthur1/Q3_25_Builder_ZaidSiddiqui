@@ -9,7 +9,9 @@ pub struct GoalAccount {
     pub status: Status,
     pub charity: Pubkey,
     #[max_len(200)]
-    pub details_uri: String
+    pub details: String,
+    pub bump: u8,
+    pub vault_bump: u8,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace)]
