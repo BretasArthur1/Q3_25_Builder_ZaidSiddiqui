@@ -2,6 +2,9 @@ use anchor_lang::prelude::*;
 
 declare_id!("EEi741VXbkmZ7i6Yd79aaJSE4K3qUFUCJthLrdqNFmZ2");
 
+mod state;
+
+
 #[program]
 pub mod fitstake {
     use super::*;
