@@ -6,7 +6,7 @@ pub struct GoalAccount {
     pub seed: u64,
     pub stake_amount: u64,
     pub deadline: i64,
-    pub status: Status,
+    pub status: GoalStatus,
     pub charity: Pubkey,
     #[max_len(200)]
     pub details: String,
@@ -14,9 +14,9 @@ pub struct GoalAccount {
     pub vault_bump: u8,
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace, Eq, PartialEq)]
 #[repr(u8)]
-pub enum Status {
+pub enum GoalStatus {
     Incomplete = 0,
     Complete = 1,
     Forfeited = 2,

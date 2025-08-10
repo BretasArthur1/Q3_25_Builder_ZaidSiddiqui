@@ -5,6 +5,21 @@ pub enum FitStakeError {
     #[msg("Default error")]
     DefaultError,
 
+    #[msg("Arithmetic error occured")]
+    ArithmeticError,
+
+    #[msg("Insufficient funds to create goal")]
+    InsufficientFunds,
+
+    #[msg("Goal deadline not yet passed")]
+    GoalDeadlineNotPassed,
+
     #[msg("Deadline for goal has passed")]
     GoalDeadlinePassed,
+
+    #[msg("Goal already completed")]
+    GoalAlreadyCompleted,
+
+    #[msg("Goal is already forfeited")]
+    GoalForfeited
 }

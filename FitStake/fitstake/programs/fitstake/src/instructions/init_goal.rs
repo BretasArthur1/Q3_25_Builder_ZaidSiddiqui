@@ -1,6 +1,6 @@
 use anchor_lang::{prelude::*, system_program::{transfer, Transfer}};
 
-use crate::state::{GoalAccount, Status, UserAccount};
+use crate::{errors::FitStakeError, state::{GoalAccount, GoalStatus, UserAccount}};
 
 #[derive(Accounts)]
 #[instruction(seed: u64)]
@@ -39,17 +39,19 @@ impl<'info> InitGoal<'info> {
         seed: u64,
         stake_amount: u64,
         deadline: i64,
-        status: Status,
         charity: Pubkey,
         details: String,
         bumps: &InitGoalBumps
     ) -> Result<()> {
 
+        // Require user has sufficient funds
+        require!(self.user.lamports() > stake_amount, FitStakeError::InsufficientFunds);
+
         self.goal_account.set_inner(GoalAccount { 
             seed, 
             stake_amount, 
             deadline, 
-            status, 
+            status: GoalStatus::Incomplete, 
             charity, 
             details, 
             bump: bumps.goal_account, 
