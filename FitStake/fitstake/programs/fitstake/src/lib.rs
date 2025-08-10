@@ -6,6 +6,7 @@ declare_id!("EEi741VXbkmZ7i6Yd79aaJSE4K3qUFUCJthLrdqNFmZ2");
 
 mod state;
 mod instructions;
+mod errors;
 
 use instructions::*;
 use state::*;
@@ -19,7 +20,13 @@ pub mod fitstake {
     }
 
     pub fn init_goal(ctx: Context<InitGoal>, seed: u64, stake_amount: u64, deadline: i64, status: Status, charity: Pubkey, details: String) -> Result<()> {
+        // TODO: Handle error
         ctx.accounts.init_goal(seed, stake_amount, deadline, status, charity, details, &ctx.bumps)?;
         ctx.accounts.deposit_stake()
+    }
+
+    pub fn complete_goal(ctx: Context<CompleteGoal>) -> Result<()> {
+        ctx.accounts.claim_stake()?;
+        ctx.accounts.mark_compelete()
     }
 }

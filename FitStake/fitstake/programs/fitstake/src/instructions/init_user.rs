@@ -24,6 +24,7 @@ pub struct InitUser<'info> {
 
 impl<'info> InitUser<'info> {
     pub fn init_user(&mut self, first_name: String, last_name: String, wallet: Pubkey, date_of_birth: i64, bumps: &InitUserBumps) -> Result<()> {
+        // TODO: Instruction introspect to ensure program ONLY is signing
 
         self.user_account.set_inner(UserAccount { 
             first_name, 
