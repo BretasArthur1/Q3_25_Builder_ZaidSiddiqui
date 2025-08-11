@@ -21,5 +21,8 @@ pub enum FitStakeError {
     GoalAlreadyCompleted,
 
     #[msg("Goal is already forfeited")]
-    GoalForfeited
+    GoalForfeited,
+
+    #[msg("User is not authority of this goal")]
+    UserNotAuthority,
 }

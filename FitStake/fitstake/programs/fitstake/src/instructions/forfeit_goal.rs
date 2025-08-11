@@ -1,6 +1,6 @@
 use anchor_lang::{prelude::*, system_program::{transfer, Transfer}};
 
-use crate::{errors::FitStakeError, state::{GoalAccount, GoalStatus}};
+use crate::{dev_event, errors::FitStakeError, state::{GoalAccount, GoalStatus}, events::ForfeitStakeEvent};
 
 const STAKE_FEE: u16 = 300;
 
@@ -36,6 +36,7 @@ impl<'info> ForfeitGoal<'info> {
         require!(self.goal_account.status != GoalStatus::Complete, FitStakeError::GoalAlreadyCompleted); // require goal not completed
         require!(self.goal_account.status != GoalStatus::Forfeited, FitStakeError::GoalForfeited); // require goal not already forfeited
 
+        // TODO: Add require statements to prevent overflow errors
         // Safe integer math: compute fee and remainder
         let stake = self.goal_account.stake_amount;
         let fee = ((stake as u128) * (STAKE_FEE as u128) / 1000u128) as u64;
@@ -66,7 +67,20 @@ impl<'info> ForfeitGoal<'info> {
         let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds);
 
         // Transfer stake fee to program vault
-        transfer(cpi_ctx, remainder)
+        transfer(cpi_ctx, remainder)?;
+
+        dev_event!(ForfeitStakeEvent {
+            user: self.goal_account.user,
+            now,
+            deadline: self.goal_account.deadline,
+            stake: self.goal_account.stake_amount,
+            fee,
+            amount: remainder,
+            charity: self.charity_vault.key(),
+            status: self.goal_account.status,
+        });
+
+        Ok(())
     }
 
     pub fn mark_forfeited(&mut self) -> Result<()> {

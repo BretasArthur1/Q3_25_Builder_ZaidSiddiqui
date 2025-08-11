@@ -7,6 +7,8 @@ declare_id!("EEi741VXbkmZ7i6Yd79aaJSE4K3qUFUCJthLrdqNFmZ2");
 mod state;
 mod instructions;
 mod errors;
+mod events;
+mod utils;
 
 use instructions::*;
 use state::*;

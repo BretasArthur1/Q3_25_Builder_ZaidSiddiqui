@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::state::UserAccount;
+use crate::{dev_event, events::InitializeUserEvent, state::UserAccount};
 
 #[derive(Accounts)]
 pub struct InitUser<'info> {
@@ -32,6 +32,11 @@ impl<'info> InitUser<'info> {
             wallet, 
             date_of_birth, 
             bump: bumps.user_account
+        });
+
+        dev_event!(InitializeUserEvent {
+            wallet,
+            user: self.user.key()         
         });
 
         Ok(())

@@ -1,6 +1,7 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { Fitstake } from "../target/types/fitstake";
+import { assert } from "chai";
 
 describe("fitstake", () => {
   // Configure the client to use the local cluster.

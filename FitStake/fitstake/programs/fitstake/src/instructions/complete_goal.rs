@@ -1,6 +1,6 @@
 use anchor_lang::{prelude::*, system_program::{transfer, Transfer}};
 
-use crate::{errors::FitStakeError, state::{GoalAccount, GoalStatus}};
+use crate::{dev_event, errors::FitStakeError, events::ClaimStakeEvent, state::{GoalAccount, GoalStatus}};
 
 #[derive(Accounts)]
 pub struct CompleteGoal<'info> {
@@ -25,6 +25,9 @@ pub struct CompleteGoal<'info> {
 
 impl<'info> CompleteGoal<'info> {
     pub fn claim_stake(&mut self) -> Result<()> {
+        // Only user can mark as complete
+        require_keys_eq!(self.user.key(), self.goal_account.user, FitStakeError::UserNotAuthority);
+
         let now = Clock::get()?.unix_timestamp;
 
         require!(now <= self.goal_account.deadline, FitStakeError::GoalDeadlinePassed); // checl deadline not passed
@@ -42,7 +45,18 @@ impl<'info> CompleteGoal<'info> {
         let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds);
 
         // Transfer stake amount back to user
-        transfer(cpi_ctx, self.goal_account.stake_amount)
+        transfer(cpi_ctx, self.goal_account.stake_amount)?;
+
+        dev_event!(ClaimStakeEvent {
+            user: self.user.key(),
+            goal_authority: self.goal_account.user,
+            amount: self.goal_account.stake_amount,
+            now,
+            deadline: self.goal_account.deadline,
+            status: self.goal_account.status
+        });
+
+        Ok(())
     }
 
     pub fn mark_complete(&mut self) -> Result<()> {

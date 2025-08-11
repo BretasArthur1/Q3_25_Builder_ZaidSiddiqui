@@ -1,6 +1,6 @@
 use anchor_lang::{prelude::*, system_program::{transfer, Transfer}};
 
-use crate::{errors::FitStakeError, state::{GoalAccount, GoalStatus, UserAccount}};
+use crate::{dev_event, errors::FitStakeError, events::{DepositStakeEvent, InitializeGoalEvent}, state::{GoalAccount, GoalStatus, UserAccount}};
 
 #[derive(Accounts)]
 #[instruction(seed: u64)]
@@ -48,6 +48,7 @@ impl<'info> InitGoal<'info> {
         require!(self.user.lamports() > stake_amount, FitStakeError::InsufficientFunds);
 
         self.goal_account.set_inner(GoalAccount { 
+            user: self.user.key(),
             seed, 
             stake_amount, 
             deadline, 
@@ -56,6 +57,13 @@ impl<'info> InitGoal<'info> {
             details, 
             bump: bumps.goal_account, 
             vault_bump: bumps.vault 
+        });
+
+        dev_event!(InitializeGoalEvent {
+            user: self.user.key(),
+            seed,
+            deadline,
+            charity
         });
 
         Ok(())
@@ -71,6 +79,13 @@ impl<'info> InitGoal<'info> {
 
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
 
-        transfer(cpi_ctx, self.goal_account.stake_amount)
+        transfer(cpi_ctx, self.goal_account.stake_amount)?;
+
+        dev_event!(DepositStakeEvent {
+            user: self.user.key(),
+            amount: self.goal_account.stake_amount,
+        });
+
+        Ok(())
     }
 }
