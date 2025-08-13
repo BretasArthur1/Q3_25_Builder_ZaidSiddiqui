@@ -8,7 +8,6 @@ mod state;
 mod instructions;
 mod errors;
 mod events;
-mod utils;
 mod constants;
 
 use instructions::*;
@@ -23,7 +22,6 @@ pub mod fitstake {
     }
 
     pub fn init_goal(ctx: Context<InitGoal>, seed: u64, stake_amount: u64, deadline: i64, charity: Pubkey, details: String) -> Result<()> {
-        // TODO: Handle error
         ctx.accounts.init_goal(seed, stake_amount, deadline, charity, details, &ctx.bumps)?;
         ctx.accounts.deposit_stake()
     }

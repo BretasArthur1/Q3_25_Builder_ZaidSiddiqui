@@ -10,7 +10,7 @@ describe("fitstake", () => {
   const provider = anchor.AnchorProvider.local();
   anchor.setProvider(provider);
 
-  const program = anchor.workspace.FitStake as Program<Fitstake>;
+  const program = anchor.workspace.Fitstake as Program<Fitstake>;
 
   const secretKeyPath = path.resolve(__dirname, "./caller-wallet.json");
   const secretKeyString = fs.readFileSync(secretKeyPath, { encoding: "utf8" });
@@ -52,18 +52,49 @@ describe("fitstake", () => {
     }
   });
 
-  it("1. Initialize Bob's account", async () => {
-    const [userPda] = getUserPda(bob.publicKey);
-    await program.methods
-      .initUser("Bob", "Smith", bob.publicKey, new anchor.BN(1234567890))
+  it("Initialize Bob's account", async () => {
+    // Define data
+    const [bobPda] = getUserPda(bob.publicKey);
+    const date = new Date("2025-08-13T23:00:00Z");
+    const timestamp: number = Math.floor(date.getTime() / 1000);
+    const first_name = "Bob";
+    const last_name = "Smith";
+    const wallet = bob.publicKey;
+
+    // Perform transaction
+    let txSig = await program.methods
+      .initUser(first_name, last_name, wallet, new anchor.BN(timestamp))
       .accounts({
-        program: caller.publicKey,
+        authorizedCaller: caller.publicKey,
         user: bob.publicKey,
-        userAccount: userPda,
+        userAccount: bobPda,
         systemProgram: SystemProgram.programId
       })
       .signers([caller])
       .rpc();
+    
+    // Ensure data on chain is correct
+    const userAccountData = await program.account.userAccount.fetch(bobPda);
+
+    assert.strictEqual(userAccountData.firstName.toString(), first_name, "First name doesn't match");
+    assert.strictEqual(userAccountData.lastName.toString(), last_name, "Last name doesn't match");
+    assert.strictEqual(userAccountData.wallet.toBase58(), wallet.toBase58(), "Wallet doesn't match");
+    assert.strictEqual(userAccountData.dateOfBirth.toString(), new anchor.BN(timestamp).toString(), "Date of birth doesn't match");
+
+    // Check event was emitted
+    const tx = await provider.connection.getParsedTransaction(txSig, "confirmed");
+    const eventParser = new anchor.EventParser(program.programId, new anchor.BorshCoder(program.idl));
+    const events = eventParser.parseLogs(tx.meta.logMessages);
+    let logsEmitted = false;
+
+    // Verify event info is correct
+    for (let event of events) {
+      if (event.name === "initializeUserEvent") {
+        logsEmitted = true;
+        assert.strictEqual(event.data.wallet.toString(), wallet.toString(), "Event wallet should match Bob's wallet");
+      }
+    }
+    assert.isTrue(logsEmitted, "InitializeUserEvent should have been emitted");
   });
 
   it("2. Initialize Lee's account", async () => {

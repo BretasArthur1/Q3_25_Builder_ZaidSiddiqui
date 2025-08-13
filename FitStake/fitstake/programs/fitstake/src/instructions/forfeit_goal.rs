@@ -1,6 +1,6 @@
 use anchor_lang::{prelude::*, system_program::{transfer, Transfer}};
 
-use crate::{constants::*, dev_event, errors::FitStakeError, events::ForfeitStakeEvent, state::{GoalAccount, GoalStatus}};
+use crate::{constants::*, errors::FitStakeError, events::ForfeitStakeEvent, state::{GoalAccount, GoalStatus}};
 
 #[derive(Accounts)]
 pub struct ForfeitGoal<'info> {
@@ -72,7 +72,7 @@ impl<'info> ForfeitGoal<'info> {
         // Transfer stake fee to program vault
         transfer(cpi_ctx, remainder)?;
 
-        dev_event!(ForfeitStakeEvent {
+        emit!(ForfeitStakeEvent {
             user: self.goal_account.user,
             now,
             deadline: self.goal_account.deadline,

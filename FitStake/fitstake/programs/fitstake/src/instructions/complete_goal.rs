@@ -1,6 +1,6 @@
 use anchor_lang::{prelude::*, system_program::{transfer, Transfer}};
 
-use crate::{dev_event, errors::FitStakeError, events::ClaimStakeEvent, state::{GoalAccount, GoalStatus}};
+use crate::{errors::FitStakeError, events::ClaimStakeEvent, state::{GoalAccount, GoalStatus}};
 
 #[derive(Accounts)]
 pub struct CompleteGoal<'info> {
@@ -47,7 +47,7 @@ impl<'info> CompleteGoal<'info> {
         // Transfer stake amount back to user
         transfer(cpi_ctx, self.goal_account.stake_amount)?;
 
-        dev_event!(ClaimStakeEvent {
+        emit!(ClaimStakeEvent {
             user: self.user.key(),
             goal_authority: self.goal_account.user,
             amount: self.goal_account.stake_amount,

@@ -5,7 +5,6 @@ use crate::state::GoalStatus;
 #[event]
 pub struct InitializeUserEvent {
     pub wallet: Pubkey,
-    pub user: Pubkey,
 }
 
 #[event]

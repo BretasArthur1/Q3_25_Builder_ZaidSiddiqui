@@ -1,6 +1,6 @@
 use anchor_lang::{prelude::*, system_program::{transfer, Transfer}};
 
-use crate::{dev_event, errors::FitStakeError, events::{DepositStakeEvent, InitializeGoalEvent}, state::{GoalAccount, GoalStatus, UserAccount}};
+use crate::{errors::FitStakeError, events::{DepositStakeEvent, InitializeGoalEvent}, state::{GoalAccount, GoalStatus, UserAccount}};
 
 #[derive(Accounts)]
 #[instruction(seed: u64)]
@@ -59,7 +59,7 @@ impl<'info> InitGoal<'info> {
             vault_bump: bumps.vault 
         });
 
-        dev_event!(InitializeGoalEvent {
+        emit!(InitializeGoalEvent {
             user: self.user.key(),
             seed,
             deadline,
@@ -81,7 +81,7 @@ impl<'info> InitGoal<'info> {
 
         transfer(cpi_ctx, self.goal_account.stake_amount)?;
 
-        dev_event!(DepositStakeEvent {
+        emit!(DepositStakeEvent {
             user: self.user.key(),
             amount: self.goal_account.stake_amount,
         });

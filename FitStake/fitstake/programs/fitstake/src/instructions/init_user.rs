@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::{constants::AUTHORIZED_CALLER, dev_event, events::InitializeUserEvent, state::UserAccount};
+use crate::{constants::AUTHORIZED_CALLER, events::InitializeUserEvent, state::UserAccount};
 
 #[derive(Accounts)]
 pub struct InitUser<'info> {
@@ -10,7 +10,6 @@ pub struct InitUser<'info> {
     )]
     pub authorized_caller: Signer<'info>,
 
-    #[account(mut)]
     pub user: SystemAccount<'info>,
 
     #[account(
@@ -27,6 +26,7 @@ pub struct InitUser<'info> {
 
 impl<'info> InitUser<'info> {
     pub fn init_user(&mut self, first_name: String, last_name: String, wallet: Pubkey, date_of_birth: i64, bumps: &InitUserBumps) -> Result<()> {
+        require_keys_eq!(self.user.key(), wallet);
 
         self.user_account.set_inner(UserAccount { 
             first_name, 
@@ -36,9 +36,8 @@ impl<'info> InitUser<'info> {
             bump: bumps.user_account
         });
 
-        dev_event!(InitializeUserEvent {
-            wallet,
-            user: self.user.key()         
+        emit!(InitializeUserEvent {
+            wallet,  
         });
 
         Ok(())
