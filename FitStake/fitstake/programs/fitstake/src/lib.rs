@@ -9,6 +9,7 @@ mod instructions;
 mod errors;
 mod events;
 mod utils;
+mod constants;
 
 use instructions::*;
 use state::*;

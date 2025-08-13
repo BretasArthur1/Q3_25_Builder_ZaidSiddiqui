@@ -1,17 +1,24 @@
+import fs from "fs";
+import path from "path";
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { FitStake } from "../target/types/fit_stake";
+import { Fitstake } from "../target/types/fitstake";
 import { assert } from "chai";
-import { PublicKey, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { Keypair, Connection, PublicKey, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 describe("fitstake", () => {
   const provider = anchor.AnchorProvider.local();
   anchor.setProvider(provider);
 
-  const program = anchor.workspace.FitStake as Program<FitStake>;
+  const program = anchor.workspace.FitStake as Program<Fitstake>;
+
+  const secretKeyPath = path.resolve(__dirname, "./caller-wallet.json");
+  const secretKeyString = fs.readFileSync(secretKeyPath, { encoding: "utf8" });
+  const secretKey = Uint8Array.from(JSON.parse(secretKeyString));
 
   // Test wallets
-  const programAuthority = provider.wallet as anchor.Wallet;
+  // const programAuthority = provider.wallet.payer as anchor.web3.Keypair;
+  const caller = Keypair.fromSecretKey(secretKey);
   const bob = anchor.web3.Keypair.generate();
   const lee = anchor.web3.Keypair.generate();
   const jack = anchor.web3.Keypair.generate();
@@ -37,7 +44,7 @@ describe("fitstake", () => {
 
   before(async () => {
     // Fund test wallets
-    for (let k of [bob, lee, jack]) {
+    for (let k of [bob, lee, jack, caller]) {
       await provider.connection.confirmTransaction(
         await provider.connection.requestAirdrop(k.publicKey, 10 * LAMPORTS_PER_SOL),
         "confirmed"
@@ -45,35 +52,34 @@ describe("fitstake", () => {
     }
   });
 
-  it("1. Initialize Bob’s account", async () => {
+  it("1. Initialize Bob's account", async () => {
     const [userPda] = getUserPda(bob.publicKey);
     await program.methods
       .initUser("Bob", "Smith", bob.publicKey, new anchor.BN(1234567890))
       .accounts({
-        program: programAuthority.publicKey,
+        program: caller.publicKey,
         user: bob.publicKey,
         userAccount: userPda,
-        systemProgram: SystemProgram.programId,
+        systemProgram: SystemProgram.programId
       })
-      .signers([programAuthority])
+      .signers([caller])
       .rpc();
   });
 
-  it("2. Initialize Lee’s account", async () => {
+  it("2. Initialize Lee's account", async () => {
     const [userPda] = getUserPda(lee.publicKey);
     await program.methods
       .initUser("Lee", "Brown", lee.publicKey, new anchor.BN(1234567890))
-      .accounts({
+      .accountsPartial({
         program: programAuthority.publicKey,
         user: lee.publicKey,
-        userAccount: userPda,
-        systemProgram: SystemProgram.programId,
+        userAccount: userPda
       })
       .signers([programAuthority])
       .rpc();
   });
 
-  it("3. Initialize Lee’s account again (should fail)", async () => {
+  it("3. Initialize Lee's account again (should fail)", async () => {
     const [userPda] = getUserPda(lee.publicKey);
     await assert.rejects(
       program.methods
@@ -89,7 +95,7 @@ describe("fitstake", () => {
     );
   });
 
-  it("4. Initialize Jack’s account (program doesn’t sign)", async () => {
+  it("4. Initialize Jack's account (program doesn't sign)", async () => {
     const [userPda] = getUserPda(jack.publicKey);
     await assert.rejects(
       program.methods

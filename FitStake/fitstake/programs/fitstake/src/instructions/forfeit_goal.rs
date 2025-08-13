@@ -1,12 +1,14 @@
 use anchor_lang::{prelude::*, system_program::{transfer, Transfer}};
 
-use crate::{dev_event, errors::FitStakeError, state::{GoalAccount, GoalStatus}, events::ForfeitStakeEvent};
-
-const STAKE_FEE: u16 = 300;
+use crate::{constants::*, dev_event, errors::FitStakeError, events::ForfeitStakeEvent, state::{GoalAccount, GoalStatus}};
 
 #[derive(Accounts)]
 pub struct ForfeitGoal<'info> {
-    /// CHECK: Safe because goal watcher verifies account integrity
+    #[account(
+        address = AUTHORIZED_CALLER
+    )]
+    pub authorized_caller: Signer<'info>,
+
     pub goal_account: Account<'info, GoalAccount>,
 
     #[account(
@@ -36,10 +38,11 @@ impl<'info> ForfeitGoal<'info> {
         require!(self.goal_account.status != GoalStatus::Complete, FitStakeError::GoalAlreadyCompleted); // require goal not completed
         require!(self.goal_account.status != GoalStatus::Forfeited, FitStakeError::GoalForfeited); // require goal not already forfeited
 
-        // TODO: Add require statements to prevent overflow errors
         // Safe integer math: compute fee and remainder
         let stake = self.goal_account.stake_amount;
-        let fee = ((stake as u128) * (STAKE_FEE as u128) / 1000u128) as u64;
+        let mut fee = stake.checked_mul(STAKE_FEE).ok_or(FitStakeError::ArithmeticError)?;
+        fee = fee.checked_div(1000u64).ok_or(FitStakeError::ArithmeticError)?;
+        // let fee = ((stake as u128) * (STAKE_FEE as u128) / 1000u128) as u64;
         let remainder = stake.checked_sub(fee).ok_or(FitStakeError::ArithmeticError)?;
         require!(fee + remainder == self.goal_account.stake_amount, FitStakeError::ArithmeticError);
 

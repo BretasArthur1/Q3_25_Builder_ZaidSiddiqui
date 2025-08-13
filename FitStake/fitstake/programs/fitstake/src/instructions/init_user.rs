@@ -1,18 +1,21 @@
 use anchor_lang::prelude::*;
 
-use crate::{dev_event, events::InitializeUserEvent, state::UserAccount};
+use crate::{constants::AUTHORIZED_CALLER, dev_event, events::InitializeUserEvent, state::UserAccount};
 
 #[derive(Accounts)]
 pub struct InitUser<'info> {
-    #[account(mut)]
-    pub program: Signer<'info>,
+    #[account(
+        mut,
+        address = AUTHORIZED_CALLER
+    )]
+    pub authorized_caller: Signer<'info>,
 
     #[account(mut)]
     pub user: SystemAccount<'info>,
 
     #[account(
         init,
-        payer = program,
+        payer = authorized_caller,
         space = UserAccount::INIT_SPACE + 8,
         seeds = [b"user", user.key().as_ref()],
         bump
@@ -24,7 +27,6 @@ pub struct InitUser<'info> {
 
 impl<'info> InitUser<'info> {
     pub fn init_user(&mut self, first_name: String, last_name: String, wallet: Pubkey, date_of_birth: i64, bumps: &InitUserBumps) -> Result<()> {
-        // TODO: Instruction introspect to ensure program ONLY is signing
 
         self.user_account.set_inner(UserAccount { 
             first_name, 
