@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 #[account]
 #[derive(InitSpace)]
 pub struct GoalAccount {
+    // TODO: Shift unnecessary info off-chain
     pub user: Pubkey,
     pub seed: u64,
     pub stake_amount: u64,

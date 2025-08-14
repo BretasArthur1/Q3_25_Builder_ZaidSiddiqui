@@ -5,6 +5,7 @@ import { Program } from "@coral-xyz/anchor";
 import { Fitstake } from "../target/types/fitstake";
 import { assert } from "chai";
 import { Keypair, Connection, PublicKey, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { generateKeyPair } from "crypto";
 
 describe("fitstake", () => {
   const provider = anchor.AnchorProvider.local();
@@ -22,6 +23,7 @@ describe("fitstake", () => {
   const bob = anchor.web3.Keypair.generate();
   const lee = anchor.web3.Keypair.generate();
   const jack = anchor.web3.Keypair.generate();
+  const charity = anchor.web3.Keypair.generate();
 
   // PDAs
   const getUserPda = (wallet: PublicKey) =>
@@ -55,7 +57,7 @@ describe("fitstake", () => {
   it("Initialize Bob's account", async () => {
     // Define data
     const [bobPda] = getUserPda(bob.publicKey);
-    const date = new Date("2025-08-13T23:00:00Z");
+    const date = new Date("2000-08-13T23:00:00Z");
     const timestamp: number = Math.floor(date.getTime() / 1000);
     const first_name = "Bob";
     const last_name = "Smith";
@@ -97,57 +99,127 @@ describe("fitstake", () => {
     assert.isTrue(logsEmitted, "InitializeUserEvent should have been emitted");
   });
 
-  it("2. Initialize Lee's account", async () => {
-    const [userPda] = getUserPda(lee.publicKey);
-    await program.methods
-      .initUser("Lee", "Brown", lee.publicKey, new anchor.BN(1234567890))
-      .accountsPartial({
-        program: programAuthority.publicKey,
+  it("Initialize Lee's account", async () => {
+    // Define data
+    const [leePda] = getUserPda(lee.publicKey);
+    const date = new Date("2000-08-13T23:00:00Z");
+    const timestamp: number = Math.floor(date.getTime() / 1000);
+    const first_name = "Lee";
+    const last_name = "Jack";
+    const wallet = lee.publicKey;
+
+    // Perform transaction
+    let txSig = await program.methods
+      .initUser(first_name, last_name, wallet, new anchor.BN(timestamp))
+      .accounts({
+        authorizedCaller: caller.publicKey,
         user: lee.publicKey,
-        userAccount: userPda
+        userAccount: leePda,
+        systemProgram: SystemProgram.programId
       })
-      .signers([programAuthority])
+      .signers([caller])
       .rpc();
+    
+    // Ensure data on chain is correct
+    const userAccountData = await program.account.userAccount.fetch(leePda);
+
+    assert.strictEqual(userAccountData.firstName.toString(), first_name, "First name doesn't match");
+    assert.strictEqual(userAccountData.lastName.toString(), last_name, "Last name doesn't match");
+    assert.strictEqual(userAccountData.wallet.toBase58(), wallet.toBase58(), "Wallet doesn't match");
+    assert.strictEqual(userAccountData.dateOfBirth.toString(), new anchor.BN(timestamp).toString(), "Date of birth doesn't match");
+
+    // Check event was emitted
+    const tx = await provider.connection.getParsedTransaction(txSig, "confirmed");
+    const eventParser = new anchor.EventParser(program.programId, new anchor.BorshCoder(program.idl));
+    const events = eventParser.parseLogs(tx.meta.logMessages);
+    let logsEmitted = false;
+
+    // Verify event info is correct
+    for (let event of events) {
+      if (event.name === "initializeUserEvent") {
+        logsEmitted = true;
+        assert.strictEqual(event.data.wallet.toString(), wallet.toString(), "Event wallet should match Lee's wallet");
+      }
+    }
+    assert.isTrue(logsEmitted, "InitializeUserEvent should have been emitted");
   });
 
-  it("3. Initialize Lee's account again (should fail)", async () => {
-    const [userPda] = getUserPda(lee.publicKey);
-    await assert.rejects(
-      program.methods
-        .initUser("Lee", "Brown", lee.publicKey, new anchor.BN(1234567890))
-        .accounts({
-          program: programAuthority.publicKey,
-          user: lee.publicKey,
-          userAccount: userPda,
-          systemProgram: SystemProgram.programId,
-        })
-        .signers([programAuthority])
-        .rpc()
-    );
+  it("Initialize Lee's account again (should fail)", async () => {
+    // Define data
+    const [leePda] = getUserPda(lee.publicKey);
+    const date = new Date("2000-08-13T23:00:00Z");
+    const timestamp: number = Math.floor(date.getTime() / 1000);
+    const first_name = "Lee";
+    const last_name = "Jack";
+    const wallet = lee.publicKey;
+
+    // Perform transaction
+    let flag = "This should fail";
+    try {
+      await program.methods
+      .initUser(first_name, last_name, wallet, new anchor.BN(timestamp))
+      .accounts({
+        authorizedCaller: caller.publicKey,
+        user: lee.publicKey,
+        userAccount: leePda,
+        systemProgram: SystemProgram.programId
+      })
+      .signers([caller])
+      .rpc();
+    } catch (error) {
+      flag = "Failed";
+      assert(error.toString().includes("already in use"), "Should fail with account already initialized error");
+    }
+    assert.strictEqual(flag, "Failed", "Reinitializing user account should fail");
   });
 
-  it("4. Initialize Jack's account (program doesn't sign)", async () => {
-    const [userPda] = getUserPda(jack.publicKey);
-    await assert.rejects(
-      program.methods
-        .initUser("Jack", "Miller", jack.publicKey, new anchor.BN(1234567890))
-        .accounts({
-          program: jack.publicKey, // wrong signer
-          user: jack.publicKey,
-          userAccount: userPda,
-          systemProgram: SystemProgram.programId,
-        })
-        .signers([jack])
-        .rpc()
-    );
+  it("Initialize Jack's account from incorrect caller (should fail)", async () => {
+    // Define data
+    const [jackPda] = getUserPda(jack.publicKey);
+    const date = new Date("2000-08-13T23:00:00Z");
+    const timestamp: number = Math.floor(date.getTime() / 1000);
+    const first_name = "Jack";
+    const last_name = "Lee";
+    const wallet = jack.publicKey;
+
+    // Perform transaction
+    let flag = "This should fail";
+    try {
+      await program.methods
+      .initUser(first_name, last_name, wallet, new anchor.BN(timestamp))
+      .accounts({
+        authorizedCaller: jack.publicKey,
+        user: jack.publicKey,
+        userAccount: jackPda,
+        systemProgram: SystemProgram.programId
+      })
+      .signers([jack])
+      .rpc();
+    } catch (error) {
+      flag = "Failed";
+      assert(error.toString().includes("address constraint was violated"), error.toString());
+    }
+    assert.strictEqual(flag, "Failed", "Incorrect caller signing should fail");
   });
 
-  it("5. Bob creates a goal", async () => {
-    const [goalPda] = getGoalPda(bob.publicKey, 1);
+  it("Bob creates a goal", async () => {
+    // Define data
+    const seed = 1;
+    const stake_amount = 1_000_000;
+    const date = new Date("2025-08-15T23:00:00Z");
+    const deadline = Math.floor(date.getTime() / 1000);
+    const details: string = "2000 steps";
+    // const space = 8 + 8 + 8 + 1 + 32 + 4 + 200 + 1 + 1;
+    // const rentExemptLamports = await provider.connection.getMinimumBalanceForRentExemption(space);
+
+    // Get PDAs
+    const [goalPda] = getGoalPda(bob.publicKey, seed);
     const [vaultPda] = getVaultPda(goalPda);
     const [userPda] = getUserPda(bob.publicKey);
-    await program.methods
-      .initGoal(new anchor.BN(1), new anchor.BN(1_000_000), new anchor.BN(Date.now() / 1000 + 3600), PublicKey.default, "Bob's goal")
+
+    // Perform tx
+    let txSig = await program.methods
+      .initGoal(new anchor.BN(seed), new anchor.BN(stake_amount), new anchor.BN(deadline), charity.publicKey, details)
       .accounts({
         user: bob.publicKey,
         userAccount: userPda,
@@ -157,24 +229,75 @@ describe("fitstake", () => {
       })
       .signers([bob])
       .rpc();
+
+    // Ensure data on chain is correct
+    const goalAccountData = await program.account.goalAccount.fetch(goalPda);
+
+    assert.strictEqual(goalAccountData.seed.toString(), seed.toString(), "Seed doesn't match");
+    assert.strictEqual(goalAccountData.stakeAmount.toString(), stake_amount.toString(), "Stake amount doesn't match");
+    assert.strictEqual(goalAccountData.charity.toString(), charity.publicKey.toString(), "Charity public key doesn't match");
+    assert.strictEqual(goalAccountData.deadline.toString(), deadline.toString(), "Deadline doesn't match");
+    assert.strictEqual(goalAccountData.details.toString(), details.toString(), "Details don't match");
+    assert.isTrue('incomplete' in goalAccountData.status, "Status doesn't match");
+    assert.strictEqual(goalAccountData.user.toString(), bob.publicKey.toString(), "User doesn't match");
+
+    // Check event was emitted
+    const tx = await provider.connection.getParsedTransaction(txSig, "confirmed");
+    const eventParser = new anchor.EventParser(program.programId, new anchor.BorshCoder(program.idl));
+    const events = eventParser.parseLogs(tx.meta.logMessages);
+    let initializeGoalEmitted = false;
+    let depositStakeEmitted = false;
+
+    // Verify event info is correct
+    for (let event of events) {
+      if (event.name === "initializeGoalEvent") {
+        initializeGoalEmitted = true;
+        assert.strictEqual(event.data.user.toString(), bob.publicKey.toString(), "Event user should match Bob's wallet");
+        assert.strictEqual(event.data.seed.toString(), seed.toString(), "Event seed should match goal's seed");
+        assert.strictEqual(event.data.deadline.toString(), deadline.toString(), "Event deadline should match goal's deadline");
+        assert.strictEqual(event.data.charity.toString(), charity.publicKey.toString(), "Event charity should match goal's charity");
+      }
+      if (event.name === "depositStakeEvent") {
+        depositStakeEmitted = true;
+        assert.strictEqual(event.data.user.toString(), bob.publicKey.toString(), "Event user should match Bob's wallet");
+        assert.strictEqual(event.data.amount.toString(), stake_amount.toString(), "Event stake amount should match goal's stake amount");
+      }
+    }
+    assert.isTrue(initializeGoalEmitted, "InitializeGoalEvent should have been emitted");
+    assert.isTrue(depositStakeEmitted, "DepositStakeEvent should have been emitted");
   });
 
-  it("6. Lee creates a goal for Bob (should fail)", async () => {
-    const [goalPda] = getGoalPda(bob.publicKey, 2);
+  it("Lee creates a goal for Bob (should fail)", async () => {
+    // Define data
+    const seed = 1;
+    const stake_amount = 500_000;
+    const date = new Date("2025-08-15T23:00:00Z");
+    const deadline = Math.floor(date.getTime() / 1000);
+    const details: string = "2000 steps";
+
+    // Get PDAs
+    const [goalPda] = getGoalPda(bob.publicKey, seed);
     const [vaultPda] = getVaultPda(goalPda);
     const [userPda] = getUserPda(bob.publicKey);
-    await assert.rejects(
-      program.methods
-        .initGoal(new anchor.BN(2), new anchor.BN(500_000), new anchor.BN(Date.now() / 1000 + 3600), PublicKey.default, "Invalid")
-        .accounts({
-          user: lee.publicKey, // wrong authority
-          userAccount: userPda,
-          goalAccount: goalPda,
-          vault: vaultPda,
-          systemProgram: SystemProgram.programId,
-        })
-        .signers([lee])
-        .rpc()
-    );
+
+    // Perform tx
+    let flag = "This should fail";
+    try {
+      await program.methods
+      .initGoal(new anchor.BN(seed), new anchor.BN(stake_amount), new anchor.BN(deadline), charity.publicKey, details)
+      .accounts({
+        user: lee.publicKey,
+        userAccount: userPda,
+        goalAccount: goalPda,
+        vault: vaultPda,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([lee])
+      .rpc();
+    } catch (error) {
+      flag = "Failed";
+      assert(error.toString().includes("seeds constraint was violated"), error.toString());
+    }
+    assert.strictEqual(flag, "Failed", "Incorrect caller signing should fail");
   });
 });

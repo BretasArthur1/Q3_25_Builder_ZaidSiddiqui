@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 #[account]
 #[derive(InitSpace)]
 pub struct UserAccount {
+    // TODO: Shift unnecessary info off-chain
     #[max_len(32)]
     pub first_name: String,
     #[max_len(32)]

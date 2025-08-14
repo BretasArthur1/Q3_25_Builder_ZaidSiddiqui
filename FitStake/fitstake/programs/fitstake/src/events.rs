@@ -15,6 +15,20 @@ pub struct InitializeGoalEvent {
     pub charity: Pubkey,
 }
 
+
+#[event]
+pub struct InitializeCharityEvent {
+    pub name: String,
+    pub description: String,
+    pub logo: String,
+}
+
+#[event]
+pub struct InitializeReferralEvent {
+    pub name: String,
+    pub referral_code: String,
+}
+
 #[event]
 pub struct DepositStakeEvent {
     pub user: Pubkey,

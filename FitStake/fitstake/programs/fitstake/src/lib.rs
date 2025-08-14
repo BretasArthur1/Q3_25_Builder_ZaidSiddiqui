@@ -35,4 +35,12 @@ pub mod fitstake {
         ctx.accounts.forfeit_stake()?;
         ctx.accounts.mark_forfeited()
     }
+
+    pub fn init_charity(ctx: Context<InitCharity>, name: String, description: String, logo: String) -> Result<()> {
+        ctx.accounts.init_charity(name, description, logo, &ctx.bumps)
+    }
+
+    pub fn init_referral(ctx: Context<InitReferral>, name: String, referral_code: String) -> Result<()> {
+        ctx.accounts.init_referral(name, referral_code, &ctx.bumps)
+    }
 }
