@@ -24,7 +24,7 @@ pub struct InitReferral<'info> {
 }
 
 impl<'info> InitReferral<'info> {
-    pub fn init_referral(&mut self, name: String, referral_code: String, bumps: &InitReferralBumps) -> Result<()> {
+    pub fn init_referral(&mut self, referral_code: String, name: String, bumps: &InitReferralBumps) -> Result<()> {
 
         self.referral.set_inner(ReferralAccount { 
             name, 

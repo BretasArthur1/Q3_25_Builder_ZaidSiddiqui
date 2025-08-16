@@ -25,4 +25,7 @@ pub enum FitStakeError {
 
     #[msg("User is not authority of this goal")]
     UserNotAuthority,
+
+    #[msg("Invalid referral code provided")]
+    InvalidReferral,
 }

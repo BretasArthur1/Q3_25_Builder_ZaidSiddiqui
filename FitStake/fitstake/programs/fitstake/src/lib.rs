@@ -11,13 +11,26 @@ mod events;
 mod constants;
 
 use instructions::*;
+use errors::*;
 
 #[program]
 pub mod fitstake {
     use super::*;
 
-    pub fn init_user(ctx: Context<InitUser>, first_name: String, last_name: String, wallet: Pubkey, date_of_birth: i64) -> Result<()> {
-        ctx.accounts.init_user(first_name, last_name, wallet, date_of_birth, &ctx.bumps)
+    pub fn init_user(ctx: Context<InitUser>, first_name: String, last_name: String, wallet: Pubkey, date_of_birth: i64, referral_code: Option<String>) -> Result<()> {
+        ctx.accounts.init_user(first_name, last_name, wallet, date_of_birth, &ctx.bumps)?;
+        if let (Some(ref_account), Some(code)) = (&ctx.accounts.referral, referral_code) {
+            // derive the PDA manually
+            let (expected_pda, _) = Pubkey::find_program_address(
+            &[b"referral", code.as_bytes()],
+            ctx.program_id
+            );
+            require_keys_eq!(ref_account.key(), expected_pda, FitStakeError::InvalidReferral);
+
+            ctx.accounts.increment_referral_count()?;
+        }
+
+        Ok(())
     }
 
     pub fn init_goal(ctx: Context<InitGoal>, seed: u64, stake_amount: u64, deadline: i64, charity: Pubkey, details: String) -> Result<()> {

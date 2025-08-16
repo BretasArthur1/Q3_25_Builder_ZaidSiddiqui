@@ -3,7 +3,6 @@ use anchor_lang::prelude::*;
 use crate::{constants::AUTHORIZED_CALLER, events::InitializeUserEvent, state::{ReferralAccount, UserAccount}};
 
 #[derive(Accounts)]
-#[instruction(referral_code: String)]
 pub struct InitUser<'info> {
     #[account(
         mut,
@@ -13,12 +12,8 @@ pub struct InitUser<'info> {
 
     pub user: SystemAccount<'info>,
 
-    #[account(
-        mut,
-        seeds = [b"referral", referral_code.as_bytes()],
-        bump = referral.bump
-    )]
-    pub referral: Account<'info, ReferralAccount>,
+    #[account(mut)]
+    pub referral: Option<Account<'info, ReferralAccount>>,
     
     #[account(
         init,
@@ -44,11 +39,17 @@ impl<'info> InitUser<'info> {
             bump: bumps.user_account
         });
 
-        self.referral.referral_count += 1;
-
         emit!(InitializeUserEvent {
             wallet,  
         });
+
+        Ok(())
+    }
+
+    pub fn increment_referral_count(&mut self) -> Result<()> {
+        if let Some(ref_account) = &mut self.referral {
+            ref_account.referral_count += 1;
+        }
 
         Ok(())
     }
