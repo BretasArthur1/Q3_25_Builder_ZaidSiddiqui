@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::{constants::AUTHORIZED_CALLER, events::InitializeUserEvent, state::{referral_account, ReferralAccount, UserAccount}};
+use crate::{constants::AUTHORIZED_CALLER, events::InitializeUserEvent, state::{ReferralAccount, UserAccount}};
 
 #[derive(Accounts)]
 #[instruction(referral_code: String)]

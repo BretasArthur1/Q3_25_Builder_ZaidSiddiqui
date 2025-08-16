@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use anchor_lang::prelude::*;
 
 use crate::{constants::AUTHORIZED_CALLER, events::InitializeCharityEvent, state::CharityAccount};

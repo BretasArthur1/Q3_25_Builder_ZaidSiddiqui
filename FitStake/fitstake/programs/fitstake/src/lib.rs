@@ -11,7 +11,6 @@ mod events;
 mod constants;
 
 use instructions::*;
-use state::*;
 
 #[program]
 pub mod fitstake {

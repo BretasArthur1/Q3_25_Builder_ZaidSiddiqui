@@ -1,8 +1,6 @@
-use std::str::FromStr;
-
 use anchor_lang::prelude::*;
 
-use crate::{constants::AUTHORIZED_CALLER, events::{InitializeCharityEvent, InitializeReferralEvent}, state::ReferralAccount};
+use crate::{constants::AUTHORIZED_CALLER, events::{InitializeReferralEvent}, state::ReferralAccount};
 
 #[derive(Accounts)]
 #[instruction(referral_code: String)]
