@@ -6,6 +6,7 @@ import { Fitstake } from "../target/types/fitstake";
 import { assert } from "chai";
 import { Keypair, Connection, PublicKey, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { generateKeyPair } from "crypto";
+import { ref } from "process";
 
 describe("fitstake", () => {
   const provider = anchor.AnchorProvider.local();
@@ -44,6 +45,24 @@ describe("fitstake", () => {
       program.programId
     );
 
+  const getReferralPda = async (code: String) =>
+    await PublicKey.findProgramAddressSync(
+      [Buffer.from("referral"), Buffer.from(code)],
+      program.programId
+    );
+
+  const getCharityPda = async (name: String) =>
+    await PublicKey.findProgramAddressSync(
+      [Buffer.from("charity"), Buffer.from(name)],
+      program.programId
+    );
+
+  const getCharityVaultPda = async (name: String) =>
+    await PublicKey.findProgramAddressSync(
+      [Buffer.from("charity"), Buffer.from("vault"), Buffer.from(name)],
+      program.programId
+    );
+
   before(async () => {
     // Fund test wallets
     for (let k of [bob, lee, jack, caller]) {
@@ -52,6 +71,149 @@ describe("fitstake", () => {
         "confirmed"
       );
     }
+  });
+
+  it("Initialize referral account", async () => {
+    // Define data
+    const code = "9KLE";
+    const [referralPda] = await getReferralPda(code);
+    const name = "Zaid";
+
+    // Perform transaction
+    let txSig = await program.methods
+      .initReferral(name, code)
+      .accounts({
+        authorizedCaller: caller.publicKey,
+        referral: referralPda,
+        systemProgram: SystemProgram.programId
+      })
+      .signers([caller])
+      .rpc();
+    
+    // Ensure data on chain is correct
+    const referralAccountData = await program.account.referralAccount.fetch(referralPda);
+
+    assert.strictEqual(referralAccountData.name.toString(), name.toString(), "Name doesn't match");
+    assert.strictEqual(referralAccountData.referralCode.toString(), code.toString(), "Referral code doesn't match");
+    assert.strictEqual(referralAccountData.referralCount.toString(), new anchor.BN(0).toString(), "Referral count isn't 0");
+
+    // Check event was emitted
+    const tx = await provider.connection.getParsedTransaction(txSig, "confirmed");
+    const eventParser = new anchor.EventParser(program.programId, new anchor.BorshCoder(program.idl));
+    const events = eventParser.parseLogs(tx.meta.logMessages);
+    let logsEmitted = false;
+
+    // Verify event info is correct
+    for (let event of events) {
+      if (event.name === "initializeReferralEvent") {
+        logsEmitted = true;
+        assert.strictEqual(event.data.name.toString(), name.toString(), "Event name doesn't match");
+        assert.strictEqual(event.data.referralCode.toString(), code.toString(), "Event referral code doesn't match");
+      }
+    }
+    assert.isTrue(logsEmitted, "InitializeReferralEvent should have been emitted");
+  });
+
+  it("Initialize referral account with incorrect signer (should fail)", async () => {
+    // Define data
+    const code = "9KLP";
+    const [referralPda] = await getReferralPda(code);
+    const name = "Jeff";
+
+    // Perform transaction
+    let flag = "This should fail";
+    try {
+      await program.methods
+      .initReferral(name, code)
+      .accounts({
+        authorizedCaller: bob.publicKey,
+        referral: referralPda,
+        systemProgram: SystemProgram.programId
+      })
+      .signers([bob])
+      .rpc();
+    } catch (error) {
+      flag = "Failed";
+      assert(error.toString().includes("address constraint was violated"), error.toString());
+    }
+    assert.strictEqual(flag, "Failed", "Incorrect caller signing should fail");
+  });
+
+  it("Initialize charity account", async () => {
+    // Define data
+    const name = "PCRF";
+    const [charityPda] = await getCharityPda(name);
+    const [charityVault] = await getCharityVaultPda(name);
+    const description = "Palestine Children's Relief Fund";
+    const logo = "placeholderfornow";
+
+    // Perform transaction
+    let txSig = await program.methods
+      .initCharity(name, description, logo)
+      .accounts({
+        authorizedCaller: caller.publicKey,
+        charity: charityPda,
+        charityVault,
+        systemProgram: SystemProgram.programId
+      })
+      .signers([caller])
+      .rpc();
+    
+    // Ensure data on chain is correct
+    const charityAccountData = await program.account.charityAccount.fetch(charityPda);
+    const charityVaultData = await provider.connection.getAccountInfo(charityVault, "confirmed");
+    if (!charityVaultData) {
+      throw new Error("Vault account not found");
+    }
+
+    assert.strictEqual(charityAccountData.name.toString(), name.toString(), "Name doesn't match");
+    assert.strictEqual(charityAccountData.description.toString(), description.toString(), "Description doesn't match");
+    assert.strictEqual(charityAccountData.logo.toString(), logo.toString(), "Logo doesn't match");
+
+    // Check event was emitted
+    const tx = await provider.connection.getParsedTransaction(txSig, "confirmed");
+    const eventParser = new anchor.EventParser(program.programId, new anchor.BorshCoder(program.idl));
+    const events = eventParser.parseLogs(tx.meta.logMessages);
+    let logsEmitted = false;
+
+    // Verify event info is correct
+    for (let event of events) {
+      if (event.name === "initializeCharityEvent") {
+        logsEmitted = true;
+        assert.strictEqual(event.data.name.toString(), name.toString(), "Event name doesn't match");
+        assert.strictEqual(event.data.description.toString(), description.toString(), "Event description doesn't match");
+        assert.strictEqual(event.data.logo.toString(), logo.toString(), "Event logo doesn't match");
+      }
+    }
+    assert.isTrue(logsEmitted, "InitializeCharityEvent should have been emitted");
+  });
+
+  it("Initialize referral account with incorrect signer (should fail)", async () => {
+    // Define data
+    const name = "PCRF";
+    const [charityPda] = await getCharityPda(name);
+    const [charityVault] = await getCharityVaultPda(name);
+    const description = "Palestine Children's Relief Fund";
+    const logo = "placeholderfornow";
+
+    // Perform transaction
+    let flag = "This should fail";
+    try {
+      await program.methods
+      .initCharity(name, description, logo)
+      .accounts({
+        authorizedCaller: bob.publicKey,
+        charity: charityPda,
+        charityVault,
+        systemProgram: SystemProgram.programId
+      })
+      .signers([bob])
+      .rpc();
+    } catch (error) {
+      flag = "Failed";
+      assert(error.toString().includes("address constraint was violated"), error.toString());
+    }
+    assert.strictEqual(flag, "Failed", "Incorrect caller signing should fail");
   });
 
   it("Initialize Bob's account", async () => {
@@ -173,7 +335,7 @@ describe("fitstake", () => {
     assert.strictEqual(flag, "Failed", "Reinitializing user account should fail");
   });
 
-  it("Initialize Jack's account from incorrect caller (should fail)", async () => {
+  it("Initialize Jack's account from incorrect signer (should fail)", async () => {
     // Define data
     const [jackPda] = await getUserPda(jack.publicKey);
     const date = new Date("2000-08-13T23:00:00Z");
