@@ -1,6 +1,6 @@
 use anchor_lang::{prelude::*, system_program::{transfer, Transfer}};
 
-use crate::{constants::*, errors::FitStakeError, events::ForfeitStakeEvent, state::{GoalAccount, GoalStatus}};
+use crate::{constants::*, errors::FitStakeError, events::ForfeitStakeEvent, state::{CharityAccount, GoalAccount, GoalStatus}};
 
 #[derive(Accounts)]
 pub struct ForfeitGoal<'info> {
@@ -18,7 +18,10 @@ pub struct ForfeitGoal<'info> {
     )]
     pub vault: SystemAccount<'info>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        address = goal_account.charity
+    )]
     pub charity_vault: SystemAccount<'info>,
 
     #[account(

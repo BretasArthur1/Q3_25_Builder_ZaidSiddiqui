@@ -26,20 +26,20 @@ describe("fitstake", () => {
   const charity = anchor.web3.Keypair.generate();
 
   // PDAs
-  const getUserPda = (wallet: PublicKey) =>
-    PublicKey.findProgramAddressSync(
+  const getUserPda = async (wallet: PublicKey) =>
+    await PublicKey.findProgramAddressSync(
       [Buffer.from("user"), wallet.toBuffer()],
       program.programId
     );
 
-  const getGoalPda = (wallet: PublicKey, seed: number) =>
-    PublicKey.findProgramAddressSync(
+  const getGoalPda = async (wallet: PublicKey, seed: number) =>
+    await PublicKey.findProgramAddressSync(
       [Buffer.from("goal"), wallet.toBuffer(), new anchor.BN(seed).toArrayLike(Buffer, "le", 8)],
       program.programId
     );
 
-  const getVaultPda = (goal: PublicKey) =>
-    PublicKey.findProgramAddressSync(
+  const getVaultPda = async (goal: PublicKey) =>
+    await PublicKey.findProgramAddressSync(
       [Buffer.from("vault"), goal.toBuffer()],
       program.programId
     );
@@ -56,7 +56,7 @@ describe("fitstake", () => {
 
   it("Initialize Bob's account", async () => {
     // Define data
-    const [bobPda] = getUserPda(bob.publicKey);
+    const [bobPda] = await getUserPda(bob.publicKey);
     const date = new Date("2000-08-13T23:00:00Z");
     const timestamp: number = Math.floor(date.getTime() / 1000);
     const first_name = "Bob";
@@ -101,7 +101,7 @@ describe("fitstake", () => {
 
   it("Initialize Lee's account", async () => {
     // Define data
-    const [leePda] = getUserPda(lee.publicKey);
+    const [leePda] = await getUserPda(lee.publicKey);
     const date = new Date("2000-08-13T23:00:00Z");
     const timestamp: number = Math.floor(date.getTime() / 1000);
     const first_name = "Lee";
@@ -146,7 +146,7 @@ describe("fitstake", () => {
 
   it("Initialize Lee's account again (should fail)", async () => {
     // Define data
-    const [leePda] = getUserPda(lee.publicKey);
+    const [leePda] = await getUserPda(lee.publicKey);
     const date = new Date("2000-08-13T23:00:00Z");
     const timestamp: number = Math.floor(date.getTime() / 1000);
     const first_name = "Lee";
@@ -175,7 +175,7 @@ describe("fitstake", () => {
 
   it("Initialize Jack's account from incorrect caller (should fail)", async () => {
     // Define data
-    const [jackPda] = getUserPda(jack.publicKey);
+    const [jackPda] = await getUserPda(jack.publicKey);
     const date = new Date("2000-08-13T23:00:00Z");
     const timestamp: number = Math.floor(date.getTime() / 1000);
     const first_name = "Jack";
@@ -213,9 +213,9 @@ describe("fitstake", () => {
     // const rentExemptLamports = await provider.connection.getMinimumBalanceForRentExemption(space);
 
     // Get PDAs
-    const [goalPda] = getGoalPda(bob.publicKey, seed);
-    const [vaultPda] = getVaultPda(goalPda);
-    const [userPda] = getUserPda(bob.publicKey);
+    const [goalPda] = await getGoalPda(bob.publicKey, seed);
+    const [vaultPda] = await getVaultPda(goalPda);
+    const [userPda] = await getUserPda(bob.publicKey);
 
     // Perform tx
     let txSig = await program.methods
@@ -276,9 +276,9 @@ describe("fitstake", () => {
     const details: string = "2000 steps";
 
     // Get PDAs
-    const [goalPda] = getGoalPda(bob.publicKey, seed);
-    const [vaultPda] = getVaultPda(goalPda);
-    const [userPda] = getUserPda(bob.publicKey);
+    const [goalPda] = await getGoalPda(bob.publicKey, seed);
+    const [vaultPda] = await getVaultPda(goalPda);
+    const [userPda] = await getUserPda(bob.publicKey);
 
     // Perform tx
     let flag = "This should fail";
