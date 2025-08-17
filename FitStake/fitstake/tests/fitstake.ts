@@ -1,20 +1,37 @@
 import fs from "fs";
 import path from "path";
+import os from "os";
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { Fitstake } from "../target/types/fitstake";
 import { assert } from "chai";
-import { Keypair, Connection, PublicKey, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { generateKeyPair } from "crypto";
-import { ref } from "process";
+import { Connection, Keypair, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 describe("fitstake", () => {
-  const provider = anchor.AnchorProvider.local();
+  // const provider = anchor.AnchorProvider.local();
+  // anchor.setProvider(provider);
+
+  // const program = anchor.workspace.Fitstake as Program<Fitstake>;
+
+  const walletPath = path.join(os.homedir(), ".config/solana/Turbin3.json");
+  const provider = new anchor.AnchorProvider(
+    new anchor.web3.Connection("https://api.devnet.solana.com", "confirmed"),
+    new anchor.Wallet(anchor.web3.Keypair.fromSecretKey(
+      Uint8Array.from(JSON.parse(require("fs").readFileSync(walletPath, "utf-8")))
+    )),
+    {
+      preflightCommitment: "confirmed",
+    }
+  );
+
   anchor.setProvider(provider);
 
-  const program = anchor.workspace.Fitstake as Program<Fitstake>;
+  const program = new anchor.Program<Fitstake>(
+    anchor.workspace.Fitstake.idl,
+    provider
+  );
 
-  // Setup caller and signer
+  // Setup caller 
   const secretKeyPath = path.resolve(__dirname, "./caller-wallet.json");
   const secretKeyString = fs.readFileSync(secretKeyPath, { encoding: "utf8" });
   const secretKey = Uint8Array.from(JSON.parse(secretKeyString));
@@ -72,49 +89,82 @@ describe("fitstake", () => {
       program.programId
     );
 
-  // Map pubkeys to human-readable names
-  const trackedAccounts: Record<string, { name: string; pubkey: PublicKey }> = {
-    caller: { name: "Caller", pubkey: caller.publicKey },
-    bob: { name: "Bob", pubkey: bob.publicKey },
-    lee: { name: "Lee", pubkey: lee.publicKey },
-  };
+  // Setup SOL funder 
+  const funderKeyPath = path.join(os.homedir(), ".config/solana/Turbin3.json");
+  const funderKeyString = fs.readFileSync(funderKeyPath, { encoding: "utf8" });
+  const funderSecretKey = Uint8Array.from(JSON.parse(funderKeyString));
+  const sender = Keypair.fromSecretKey(funderSecretKey);
 
-  let balancesBefore: Record<string, number> = {};
+  // Connect to devnet
+  const connection = new Connection("https://api.devnet.solana.com", "confirmed");
 
-  beforeEach(async () => {
-    balancesBefore = {};
-    for (const [key, { pubkey }] of Object.entries(trackedAccounts)) {
-      const balance = await provider.connection.getBalance(pubkey);
-      balancesBefore[key] = balance;
-    }
-  });
+  const sendSol = async (recipient: Keypair) => {
+    const tx = new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: sender.publicKey,
+        toPubkey: recipient.publicKey,
+        lamports: 0.5 * LAMPORTS_PER_SOL, // 1 SOL
+      })
+    );
 
-  afterEach(async () => {
-    for (const [key, { name, pubkey }] of Object.entries(trackedAccounts)) {
-      const beforeLamports = balancesBefore[key] ?? 0;
-      const afterLamports = await provider.connection.getBalance(pubkey);
+    const signature = await connection.sendTransaction(tx, [sender]);
+    console.log("Transaction signature:", signature);
 
-      if (beforeLamports !== afterLamports) {
-        const beforeSol = beforeLamports / LAMPORTS_PER_SOL;
-        const afterSol = afterLamports / LAMPORTS_PER_SOL;
-        const diff = afterSol - beforeSol;
+    // Wait for confirmation
+    await connection.confirmTransaction(signature, "confirmed");
+    console.log("Transfer confirmed!");
+  }
 
-        console.log(
-          `${name} balance changed: ` +
-          `${beforeSol.toFixed(6)} SOL → ${afterSol.toFixed(6)} SOL ` +
-          `(Δ ${diff.toFixed(6)} SOL)`
-        );
-      }
-    }
-  });
+  // // Map pubkeys to human-readable names
+  // const trackedAccounts: Record<string, { name: string; pubkey: PublicKey }> = {
+  //   caller: { name: "Caller", pubkey: caller.publicKey },
+  //   bob: { name: "Bob", pubkey: bob.publicKey },
+  //   lee: { name: "Lee", pubkey: lee.publicKey },
+  // };
+
+  // let balancesBefore: Record<string, number> = {};
+
+  // beforeEach(async () => {
+  //   balancesBefore = {};
+  //   for (const [key, { pubkey }] of Object.entries(trackedAccounts)) {
+  //     const balance = await provider.connection.getBalance(pubkey);
+  //     balancesBefore[key] = balance;
+  //   }
+  // });
+
+  // afterEach(async () => {
+  //   for (const [key, { name, pubkey }] of Object.entries(trackedAccounts)) {
+  //     const beforeLamports = balancesBefore[key] ?? 0;
+  //     const afterLamports = await provider.connection.getBalance(pubkey);
+
+  //     if (beforeLamports !== afterLamports) {
+  //       const beforeSol = beforeLamports / LAMPORTS_PER_SOL;
+  //       const afterSol = afterLamports / LAMPORTS_PER_SOL;
+  //       const diff = afterSol - beforeSol;
+
+  //       console.log(
+  //         `${name} balance changed: ` +
+  //         `${beforeSol.toFixed(6)} SOL → ${afterSol.toFixed(6)} SOL ` +
+  //         `(Δ ${diff.toFixed(6)} SOL)`
+  //       );
+  //     }
+  //   }
+  // });
+
+  // before(async () => { 
+  //   // Fund test wallets 
+  //   for (let k of [bob, lee, jack, caller]) { 
+  //     await provider.connection.confirmTransaction( 
+  //       await provider.connection.requestAirdrop(k.publicKey, 0.5 * LAMPORTS_PER_SOL), 
+  //       "confirmed" 
+  //     ); 
+  //   } 
+  // });
 
   before(async () => {
     // Fund test wallets
     for (let k of [bob, lee, jack, caller]) {
-      await provider.connection.confirmTransaction(
-        await provider.connection.requestAirdrop(k.publicKey, 10 * LAMPORTS_PER_SOL),
-        "confirmed"
-      );
+      await sendSol(k)
     }
   });
 

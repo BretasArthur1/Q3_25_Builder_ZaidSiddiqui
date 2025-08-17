@@ -12,8 +12,8 @@ fitstake = "EEi741VXbkmZ7i6Yd79aaJSE4K3qUFUCJthLrdqNFmZ2"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
-wallet = "~/.config/solana/id.json"
+cluster = "devnet"
+wallet = "~/.config/solana/Turbin3.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

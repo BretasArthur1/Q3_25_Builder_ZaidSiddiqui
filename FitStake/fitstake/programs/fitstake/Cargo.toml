@@ -10,7 +10,6 @@ name = "fitstake"
 
 [features]
 default = []
-dev = []
 cpi = ["no-entrypoint"]
 no-entrypoint = []
 no-idl = []
