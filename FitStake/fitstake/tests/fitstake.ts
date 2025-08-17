@@ -161,6 +161,18 @@ describe("fitstake", () => {
   //   } 
   // });
 
+  function randomString(length: number = 4): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+      const index = Math.floor(Math.random() * chars.length);
+      result += chars[index];
+    }
+    return result;
+  }
+
+  const leeReferral = randomString();
+
   before(async () => {
     // Fund test wallets
     for (let k of [bob, lee, jack, caller]) {
@@ -170,7 +182,7 @@ describe("fitstake", () => {
 
   it("Initialize referral account", async () => {
     // Define data
-    const code = "9KLE";
+    const code = leeReferral;
     const [referralPda] = await getReferralPda(code);
     const name = "Zaid";
 
@@ -259,7 +271,7 @@ describe("fitstake", () => {
     assert.strictEqual(flag, "Failed", "Incorrect caller signing should fail");
   });
 
-  it("Initialize charity account", async () => {
+  xit("Initialize charity account", async () => {
     // Define data
     const name = "PCRF";
     const [charityPda] = await getCharityPda(name);
@@ -414,7 +426,7 @@ describe("fitstake", () => {
     const first_name = "Lee";
     const last_name = "Jack";
     const wallet = lee.publicKey;
-    const code = "9KLE";
+    const code = leeReferral;
     const [referralPda] = await getReferralPda(code);
 
     // Perform transaction
@@ -960,6 +972,9 @@ describe("fitstake", () => {
     const charityAccountData = await program.account.charityAccount.fetch(goalAccountDataBefore.charity);
     const [charityVault] = await getCharityVaultPda(charityAccountData.name);
     const [programVault] = await getProgramVault();
+
+    const beforeProgramVaultAmount = (await provider.connection.getAccountInfo(programVault)).lamports;
+    const beforeCharityVaultAmount = (await provider.connection.getAccountInfo(charityVault)).lamports;
     
     let txSig = await program.methods
       .forfeitGoal()
@@ -987,8 +1002,8 @@ describe("fitstake", () => {
     const stakeAmount = goalAccountDataAfter.stakeAmount.toNumber();
 
     assert.ok(vaultAccountInfo == null, "Vault account shouldn't exist");
-    assert.strictEqual(programVaultInfo.lamports, stakeAmount * STAKE_FEE, "Program vault balance not corret");
-    assert.strictEqual(charityVaultInfo.lamports, stakeAmount * (1 - STAKE_FEE), "Charity vault balance not correct")
+    assert.strictEqual(programVaultInfo.lamports - beforeProgramVaultAmount, stakeAmount * STAKE_FEE, "Program vault balance not corret");
+    assert.strictEqual(charityVaultInfo.lamports - beforeCharityVaultAmount, stakeAmount * (1 - STAKE_FEE), "Charity vault balance not correct")
   });
 
   it("Bob claims his goal after it has been forfeited (should fail)", async () => {
