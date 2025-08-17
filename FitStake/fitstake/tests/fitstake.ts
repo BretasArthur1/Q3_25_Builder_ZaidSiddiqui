@@ -1001,4 +1001,138 @@ describe("fitstake", () => {
     }
     assert.strictEqual(flag, "Failed", "Forfeiting twice should fail");
   });
+
+  it("Lee claims a non-existent goal (should fail)", async () => {
+    // Define data
+    const seed = 2;
+
+    // Get PDAs
+    const [goalPda] = await getGoalPda(lee.publicKey, seed);
+    const [vaultPda] = await getVaultPda(goalPda);
+
+    // Perform tx
+    let flag = "This should fail";
+    try { 
+      await program.methods
+      .completeGoal()
+      .accounts({
+        user: lee.publicKey,
+        goalAccount: goalPda,
+        vault: vaultPda,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([lee])
+      .rpc();
+    } catch (error) {
+      flag = "Failed";
+      assert(error.toString().includes("program expected this account to be already initialized"), error.toString());
+    }
+    assert.strictEqual(flag, "Failed", "Can't claim a non-existent goal");
+  });
+
+  it("Program forfeits Lee's non-existent goal again (should fail)", async () => {
+    // Get accounts and data
+    const seed = 2;
+    const [goalPda] = await getGoalPda(lee.publicKey, seed);
+    const [vault] = await getVaultPda(goalPda);
+    const [charityAccount] = await getCharityPda("PCRF");
+    const [charityVault] = await getCharityVaultPda("PCRF");
+    const [programVault] = await getProgramVault();
+
+    // Perform tx
+    let flag = "This should fail";
+    try { 
+      await program.methods
+      .forfeitGoal()
+      .accounts({
+        authorizedCaller: caller.publicKey,
+        goalAccount: goalPda,
+        vault,
+        charity: charityAccount,
+        charityVault,
+        programVault,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([caller])
+      .rpc();
+    } catch (error) {
+      flag = "Failed";
+      assert(error.toString().includes("program expected this account to be already initialized"), error.toString());
+    }
+    assert.strictEqual(flag, "Failed", "Can't forfeit a non-existent goal");
+  });
+
+  it("Lee creates a goal with insufficient funds", async () => {
+    // Define data
+    const seed = 1;
+    const stake_amount = Number.MAX_SAFE_INTEGER;
+    const date = new Date("2030-08-15T23:00:00Z");
+    const deadline = Math.floor(date.getTime() / 1000);
+    const details: string = "2000 steps";
+    const charity = "PCRF";
+    const [charityPda] = await getCharityPda(charity);
+
+    // Get PDAs
+    const [goalPda] = await getGoalPda(lee.publicKey, seed);
+    const [vaultPda] = await getVaultPda(goalPda);
+    const [userPda] = await getUserPda(lee.publicKey);
+
+    // Perform tx
+    let flag = "This should fail";
+    try {
+      await program.methods
+      .initGoal(new anchor.BN(seed), new anchor.BN(stake_amount), new anchor.BN(deadline), charityPda, details)
+      .accounts({
+        user: lee.publicKey,
+        userAccount: userPda,
+        goalAccount: goalPda,
+        vault: vaultPda,
+        charity: charityPda,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([lee])
+      .rpc();
+    } catch (error) {
+      flag = "Failed";
+      assert(error.toString().includes("InsufficientFunds"), error.toString());
+    }
+    assert.strictEqual(flag, "Failed", "Insufficient funds should fail");
+  });
+
+  it("Lee creates a goal staking 0 lamports", async () => {
+    // Define data
+    const seed = 1;
+    const stake_amount = 0;
+    const date = new Date("2030-08-15T23:00:00Z");
+    const deadline = Math.floor(date.getTime() / 1000);
+    const details: string = "2000 steps";
+    const charity = "PCRF";
+    const [charityPda] = await getCharityPda(charity);
+
+    // Get PDAs
+    const [goalPda] = await getGoalPda(lee.publicKey, seed);
+    const [vaultPda] = await getVaultPda(goalPda);
+    const [userPda] = await getUserPda(lee.publicKey);
+
+    // Perform tx
+    let flag = "This should fail";
+    try {
+      await program.methods
+      .initGoal(new anchor.BN(seed), new anchor.BN(stake_amount), new anchor.BN(deadline), charityPda, details)
+      .accounts({
+        user: lee.publicKey,
+        userAccount: userPda,
+        goalAccount: goalPda,
+        vault: vaultPda,
+        charity: charityPda,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([lee])
+      .rpc();
+    } catch (error) {
+      flag = "Failed";
+      assert(error.toString().includes("StakingZeroLamports"), error.toString());
+    }
+    assert.strictEqual(flag, "Failed", "Can't stake 0 lamports");
+  });
 });
