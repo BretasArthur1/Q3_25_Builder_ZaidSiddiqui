@@ -8,6 +8,7 @@ pub struct CompleteGoal<'info> {
     pub user: Signer<'info>,
 
     #[account(
+        mut,
         seeds = [b"goal", user.key().as_ref(), goal_account.seed.to_le_bytes().as_ref()],
         bump
     )]
@@ -30,10 +31,10 @@ impl<'info> CompleteGoal<'info> {
 
         let now = Clock::get()?.unix_timestamp;
 
-        require!(now <= self.goal_account.deadline, FitStakeError::GoalDeadlinePassed); // checl deadline not passed
         require!(self.goal_account.status != GoalStatus::Complete, FitStakeError::GoalAlreadyCompleted); // check goal not already marked as complete
         require!(self.goal_account.status != GoalStatus::Forfeited, FitStakeError::GoalForfeited); // check goal not forfeited
-
+        require!(now <= self.goal_account.deadline, FitStakeError::GoalDeadlinePassed); // checl deadline not passed
+        
         // Setup transfer CPI
         let cpi_accounts = Transfer {
             from: self.vault.to_account_info(),
@@ -60,9 +61,7 @@ impl<'info> CompleteGoal<'info> {
     }
 
     pub fn mark_complete(&mut self) -> Result<()> {
-        let goal_account = &mut self.goal_account;
-
-        goal_account.status = GoalStatus::Complete;
+        self.goal_account.status = GoalStatus::Complete;
 
         Ok(())
     }

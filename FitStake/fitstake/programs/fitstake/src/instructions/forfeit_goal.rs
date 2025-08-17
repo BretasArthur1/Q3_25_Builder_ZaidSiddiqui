@@ -1,6 +1,6 @@
 use anchor_lang::{prelude::*, system_program::{transfer, Transfer}};
 
-use crate::{constants::*, errors::FitStakeError, events::ForfeitStakeEvent, state::{GoalAccount, GoalStatus}};
+use crate::{constants::*, errors::FitStakeError, events::ForfeitStakeEvent, state::{CharityAccount, GoalAccount, GoalStatus}};
 
 #[derive(Accounts)]
 pub struct ForfeitGoal<'info> {
@@ -9,6 +9,7 @@ pub struct ForfeitGoal<'info> {
     )]
     pub authorized_caller: Signer<'info>,
 
+    #[account(mut)]
     pub goal_account: Account<'info, GoalAccount>,
 
     #[account(
@@ -19,12 +20,19 @@ pub struct ForfeitGoal<'info> {
     pub vault: SystemAccount<'info>,
 
     #[account(
-        mut,
         address = goal_account.charity
+    )]
+    pub charity: Account<'info, CharityAccount>,
+
+    #[account(
+        mut,
+        seeds = [b"charity", b"vault", charity.name.as_bytes()],
+        bump = charity.vault_bump
     )]
     pub charity_vault: SystemAccount<'info>,
 
     #[account(
+        mut,
         seeds = [b"fitstake", b"program", b"vault"],
         bump
     )]
@@ -37,10 +45,10 @@ impl<'info> ForfeitGoal<'info> {
     pub fn forfeit_stake(&mut self) -> Result<()> {
         let now = Clock::get()?.unix_timestamp;
 
-        require!(now >= self.goal_account.deadline, FitStakeError::GoalDeadlineNotPassed); // require deadline to be passed
         require!(self.goal_account.status != GoalStatus::Complete, FitStakeError::GoalAlreadyCompleted); // require goal not completed
         require!(self.goal_account.status != GoalStatus::Forfeited, FitStakeError::GoalForfeited); // require goal not already forfeited
-
+        require!(now >= self.goal_account.deadline, FitStakeError::GoalDeadlineNotPassed); // require deadline to be passed
+        
         // Safe integer math: compute fee and remainder
         let stake = self.goal_account.stake_amount;
         let mut fee = stake.checked_mul(STAKE_FEE).ok_or(FitStakeError::ArithmeticError)?;

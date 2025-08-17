@@ -1,6 +1,6 @@
 use anchor_lang::{prelude::*, system_program::{transfer, Transfer}};
 
-use crate::{errors::FitStakeError, events::{DepositStakeEvent, InitializeGoalEvent}, state::{GoalAccount, GoalStatus, UserAccount}};
+use crate::{errors::FitStakeError, events::{DepositStakeEvent, InitializeGoalEvent}, state::{CharityAccount, GoalAccount, GoalStatus, UserAccount}};
 
 #[derive(Accounts)]
 #[instruction(seed: u64)]
@@ -30,6 +30,8 @@ pub struct InitGoal<'info> {
     )]
     pub vault: SystemAccount<'info>,
 
+    pub charity: Account<'info, CharityAccount>,
+
     pub system_program: Program<'info, System>
 }
 
@@ -44,8 +46,9 @@ impl<'info> InitGoal<'info> {
         bumps: &InitGoalBumps
     ) -> Result<()> {
 
-        // Require user has sufficient funds
-        require!(self.user.lamports() > stake_amount, FitStakeError::InsufficientFunds);
+        require!(self.user.lamports() > stake_amount, FitStakeError::InsufficientFunds); // Require user has sufficient funds
+        require!(stake_amount > 0, FitStakeError::StakingZeroLamports); // Require stake amount to be greater than zero
+        require_keys_eq!(charity, self.charity.key()); // Require consistency in charity passed
 
         self.goal_account.set_inner(GoalAccount { 
             user: self.user.key(),

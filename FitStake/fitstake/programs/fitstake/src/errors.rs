@@ -11,6 +11,9 @@ pub enum FitStakeError {
     #[msg("Insufficient funds to create goal")]
     InsufficientFunds,
 
+    #[msg("Staking zero lamports not allowed")]
+    StakingZeroLamports,
+
     #[msg("Goal deadline not yet passed")]
     GoalDeadlineNotPassed,
 
