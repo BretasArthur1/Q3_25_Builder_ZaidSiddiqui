@@ -108,11 +108,10 @@ describe("fitstake", () => {
     );
 
     const signature = await connection.sendTransaction(tx, [sender]);
-    console.log("Transaction signature:", signature);
 
     // Wait for confirmation
     await connection.confirmTransaction(signature, "confirmed");
-    console.log("Transfer confirmed!");
+    console.log("Airdrop successful!");
   }
 
   // // Map pubkeys to human-readable names
@@ -271,50 +270,50 @@ describe("fitstake", () => {
     assert.strictEqual(flag, "Failed", "Incorrect caller signing should fail");
   });
 
-  xit("Initialize charity account", async () => {
-    // Define data
-    const name = "PCRF";
-    const [charityPda] = await getCharityPda(name);
-    const [charityVault] = await getCharityVaultPda(name);
-    const description = "Palestine Children's Relief Fund";
-    const logo = "placeholderfornow";
+  // xit("Initialize charity account", async () => {
+  //   // Define data
+  //   const name = "PCRF";
+  //   const [charityPda] = await getCharityPda(name);
+  //   const [charityVault] = await getCharityVaultPda(name);
+  //   const description = "Palestine Children's Relief Fund";
+  //   const logo = "placeholderfornow";
 
-    // Perform transaction
-    let txSig = await program.methods
-      .initCharity(name, description, logo)
-      .accounts({
-        authorizedCaller: caller.publicKey,
-        charity: charityPda,
-        charityVault,
-        systemProgram: SystemProgram.programId
-      })
-      .signers([caller])
-      .rpc();
+  //   // Perform transaction
+  //   let txSig = await program.methods
+  //     .initCharity(name, description, logo)
+  //     .accounts({
+  //       authorizedCaller: caller.publicKey,
+  //       charity: charityPda,
+  //       charityVault,
+  //       systemProgram: SystemProgram.programId
+  //     })
+  //     .signers([caller])
+  //     .rpc();
     
-    // Ensure data on chain is correct
-    const charityAccountData = await program.account.charityAccount.fetch(charityPda);
+  //   // Ensure data on chain is correct
+  //   const charityAccountData = await program.account.charityAccount.fetch(charityPda);
 
-    assert.strictEqual(charityAccountData.name.toString(), name.toString(), "Name doesn't match");
-    assert.strictEqual(charityAccountData.description.toString(), description.toString(), "Description doesn't match");
-    assert.strictEqual(charityAccountData.logo.toString(), logo.toString(), "Logo doesn't match");
+  //   assert.strictEqual(charityAccountData.name.toString(), name.toString(), "Name doesn't match");
+  //   assert.strictEqual(charityAccountData.description.toString(), description.toString(), "Description doesn't match");
+  //   assert.strictEqual(charityAccountData.logo.toString(), logo.toString(), "Logo doesn't match");
 
-    // // Check event was emitted
-    // const tx = await provider.connection.getParsedTransaction(txSig, "confirmed");
-    // const eventParser = new anchor.EventParser(program.programId, new anchor.BorshCoder(program.idl));
-    // const events = eventParser.parseLogs(tx.meta.logMessages);
-    // let logsEmitted = false;
+  //   // // Check event was emitted
+  //   // const tx = await provider.connection.getParsedTransaction(txSig, "confirmed");
+  //   // const eventParser = new anchor.EventParser(program.programId, new anchor.BorshCoder(program.idl));
+  //   // const events = eventParser.parseLogs(tx.meta.logMessages);
+  //   // let logsEmitted = false;
 
-    // // Verify event info is correct
-    // for (let event of events) {
-    //   if (event.name === "initializeCharityEvent") {
-    //     logsEmitted = true;
-    //     assert.strictEqual(event.data.name.toString(), name.toString(), "Event name doesn't match");
-    //     assert.strictEqual(event.data.description.toString(), description.toString(), "Event description doesn't match");
-    //     assert.strictEqual(event.data.logo.toString(), logo.toString(), "Event logo doesn't match");
-    //   }
-    // }
-    // assert.isTrue(logsEmitted, "InitializeCharityEvent should have been emitted");
-  });
+  //   // // Verify event info is correct
+  //   // for (let event of events) {
+  //   //   if (event.name === "initializeCharityEvent") {
+  //   //     logsEmitted = true;
+  //   //     assert.strictEqual(event.data.name.toString(), name.toString(), "Event name doesn't match");
+  //   //     assert.strictEqual(event.data.description.toString(), description.toString(), "Event description doesn't match");
+  //   //     assert.strictEqual(event.data.logo.toString(), logo.toString(), "Event logo doesn't match");
+  //   //   }
+  //   // }
+  //   // assert.isTrue(logsEmitted, "InitializeCharityEvent should have been emitted");
+  // });
 
   it("Initialize charity account again (should fail)", async () => {
     // Define data
